@@ -1,33 +1,44 @@
-# isoforest_loop
 import pandas as pd
-import numpy as np
 from sklearn.ensemble import IsolationForest
 
-# Load data
+# Load train and test data
 train_data = pd.read_csv("train.csv")
 test_data = pd.read_csv("test.csv")
 
-# Define columns to drop
-drop_cols = ["date", "ID", "Sub ID"]
+# Set columns for grouping the data
+group_cols = ['day', 'ID', 'Sub ID']
 
-# Loop through each target column
-for target_col in ["target_1", "target_2"]:
-    # Extract feature and target columns
-    train_X = train_data.drop(drop_cols + [target_col], axis=1)
-    train_y = train_data[target_col]
-    test_X = test_data.drop(drop_cols + [target_col], axis=1)
+# Create an empty DataFrame to store the results
+results_df = pd.DataFrame()
 
-    # Train Isolation Forest model
-    clf = IsolationForest(random_state=42, contamination=0.1)
-    clf.fit(train_X)
+# Loop through each unique day value in the train data
+for day_type in train_data['day'].unique():
+    # Loop through each target variable
+    for target_col in ['target_1', 'target_2']:
+        # Filter the train and test data by day type and target column
+        train_subset = train_data.loc[(train_data['day'] == day_type) & (train_data[target_col].notnull())]
+        test_subset = test_data.loc[test_data['day'] == day_type]
 
-    # Predict on test data
-    test_y_pred = clf.predict(test_X)
-    test_y_pred = np.where(test_y_pred == -1, 1, 0)  # Convert to 1 for anomaly and 0 for normal
+        # Separate the features and target variables
+        X_train = train_subset.drop(target_col, axis=1)
+        y_train = train_subset[target_col]
+        X_test = test_subset.drop(target_col, axis=1)
 
-    # Add prediction column to test dataset
-    test_data[target_col+"_pred"] = test_y_pred
+        # Fit the Isolation Forest model to the training data
+        model = IsolationForest()
+        model.fit(X_train)
 
-    # Save predictions to CSV
-    test_data.to_csv("test_predictions_{}.csv".format(target_col), index=False)
+        # Make predictions on the test data
+        y_pred = model.predict(X_test)
 
+        # Add the predictions to the test data
+        test_subset[target_col] = y_pred
+
+        # Merge the test data with the original data to get the corresponding date, ID, and Sub ID
+        test_results = pd.merge(test_subset, test_data[group_cols], on=group_cols)
+
+        # Append the results to the results DataFrame
+        results_df = results_df.append(test_results, ignore_index=True)
+
+# Save the results DataFrame to a CSV file
+results_df.to_csv("result.csv", index=False)
