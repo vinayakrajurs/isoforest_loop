@@ -164,8 +164,8 @@ anomalies = pd.concat(results, ignore_index=True)
 print(anomalies)
 
 
-
-##all 3 models
+#END of code
+#ALL 3 MODELS
 import pandas as pd
 from sklearn.ensemble import IsolationForest
 from sklearn.neighbors import LocalOutlierFactor
