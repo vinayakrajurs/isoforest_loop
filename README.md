@@ -163,3 +163,65 @@ anomalies = pd.concat(results, ignore_index=True)
 # Print the anomalies
 print(anomalies)
 
+
+
+##all 3 models
+import pandas as pd
+from sklearn.ensemble import IsolationForest
+from sklearn.neighbors import LocalOutlierFactor
+from sklearn.svm import OneClassSVM
+
+# function to apply Isolation Forest anomaly detection model
+def apply_isolation_forest(df_train, df_test):
+    clf = IsolationForest(contamination=0.1, random_state=42)
+    clf.fit(df_train)
+    y_pred = clf.predict(df_test)
+    return y_pred
+
+# function to apply LOF anomaly detection model
+def apply_lof(df_train, df_test):
+    clf = LocalOutlierFactor(n_neighbors=20, contamination=0.1)
+    clf.fit(df_train)
+    y_pred = clf.fit_predict(df_test)
+    return y_pred
+
+# function to apply One Class SVM anomaly detection model
+def apply_one_class_svm(df_train, df_test):
+    clf = OneClassSVM(nu=0.1, kernel="rbf", gamma=0.1)
+    clf.fit(df_train)
+    y_pred = clf.predict(df_test)
+    return y_pred
+
+# function to get anomalies and return result dataframe
+def get_anomalies(model_func, train_path, test_path, result_path):
+    df_train = pd.read_csv(train_path)
+    df_test = pd.read_csv(test_path)
+    df_test["anomaly"] = model_func(df_train, df_test.iloc[:,1:-1])
+    df_test.to_csv(result_path, index=False)
+
+# paths to train, test and result files
+train_path = "train_data.csv"
+test_path = "test_data.csv"
+result_path_iforest = "results_isolation_forest.csv"
+result_path_lof = "results_lof.csv"
+result_path_svm = "results_one_class_svm.csv"
+result_path_concat = "results_concatenated.csv"
+
+# apply isolation forest and save results
+get_anomalies(apply_isolation_forest, train_path, test_path, result_path_iforest)
+
+# apply LOF and save results
+get_anomalies(apply_lof, train_path, test_path, result_path_lof)
+
+# apply One Class SVM and save results
+get_anomalies(apply_one_class_svm, train_path, test_path, result_path_svm)
+
+# concatenate anomaly column from all 3 models and save final results
+df_iforest = pd.read_csv(result_path_iforest)
+df_lof = pd.read_csv(result_path_lof)
+df_svm = pd.read_csv(result_path_svm)
+
+df_concat = pd.concat([df_iforest["anomaly"], df_lof["anomaly"], df_svm["anomaly"]], axis=1)
+df_concat.columns = ["anomaly_iforest", "anomaly_lof", "anomaly_svm"]
+df_concat.to_csv(result_path_concat, index=False)
+
