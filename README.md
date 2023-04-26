@@ -105,3 +105,61 @@ for i, row in test_data.iterrows():
 # Saving the result DataFrame to a new CSV file
 result_data.to_csv('result.csv', index=False)
 
+
+##Phrophet FB modrl
+# Import required libraries
+import pandas as pd
+from fbprophet import Prophet
+import multiprocessing as mp
+
+# Load train and test time series data into pandas DataFrames
+train_df = pd.read_csv('train_data.csv')
+test_df = pd.read_csv('test_data.csv')
+
+# Rename columns to "ds" and "y" as required by Prophet
+train_df = train_df.rename(columns={'timestamp': 'ds', 'value': 'y'})
+test_df = test_df.rename(columns={'timestamp': 'ds', 'value': 'y'})
+
+# Create Prophet model and fit the train data
+model = Prophet()
+model.fit(train_df)
+
+# Generate a dataframe of future timestamps to make predictions on
+future = model.make_future_dataframe(periods=len(test_df))
+
+# Use the model to make predictions on the future data
+forecast = model.predict(future)
+
+# Merge train and test dataframes for evaluation
+merged_df = pd.concat([train_df, test_df], ignore_index=True)
+
+# Split the test data into chunks for parallel processing
+num_chunks = mp.cpu_count()  # Number of chunks equals the number of CPU cores
+chunk_size = len(test_df) // num_chunks
+test_chunks = [test_df.iloc[i*chunk_size:(i+1)*chunk_size] for i in range(num_chunks)]
+if len(test_df) % num_chunks != 0:
+    # Add remaining rows to last chunk
+    test_chunks[-1] = pd.concat([test_chunks[-1], test_df.iloc[num_chunks*chunk_size:]])
+
+# Define function for anomaly detection
+def detect_anomalies(test_chunk):
+    chunk_min = test_chunk['ds'].min()
+    chunk_max = test_chunk['ds'].max()
+    chunk_forecast = forecast[(forecast['ds'] >= chunk_min) &
+                              (forecast['ds'] <= chunk_max)]
+    chunk_anomalies = chunk_forecast[((chunk_forecast['yhat_upper'] < test_chunk['y']) |
+                                      (chunk_forecast['yhat_lower'] > test_chunk['y']))]
+    return chunk_anomalies
+
+# Process test data chunks in parallel using multiprocessing
+pool = mp.Pool(num_chunks)
+results = pool.map(detect_anomalies, test_chunks)
+pool.close()
+pool.join()
+
+# Combine results from each chunk into a single DataFrame
+anomalies = pd.concat(results, ignore_index=True)
+
+# Print the anomalies
+print(anomalies)
+
