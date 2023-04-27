@@ -298,3 +298,71 @@ result_data = pd.concat(result_chunks, ignore_index=True)
 # Saving the result DataFrame to a new CSV file
 result_data.to_csv('result.csv', index=False)
 
+
+
+##ISOLATION FOREST MULTIVARIATE
+import pandas as pd
+from sklearn.ensemble import IsolationForest
+from multiprocessing import Pool, cpu_count
+
+# Reading the train and test datasets
+train_data = pd.read_csv('train.csv')
+test_data = pd.read_csv('test.csv')
+
+# Defining the columns to use for anomaly detection and the target column names
+cols = ['Date', 'ID', 'Sub ID', 'Present']
+target_cols = ['Target 1', 'Target 2']
+
+# Function to process each chunk of the test data in parallel
+def process_chunk(chunk):
+    # Creating a new DataFrame to store the results for the current chunk
+    result_data = pd.DataFrame(columns=test_data.columns)
+
+    # Looping through each row in the chunk
+    for i, row in chunk.iterrows():
+        test_id = row['ID']
+        test_sub_id = row['Sub ID']
+        test_present = row['Present']
+        
+        # Filtering the train data for the current ID, Sub ID, and Present value
+        train_subset = train_data[(train_data['ID'] == test_id) & (train_data['Sub ID'] == test_sub_id) & (train_data['Present'] == test_present)]
+        
+        # Selecting the data for training the Isolation Forest model
+        train_X = train_subset.loc[:, target_cols].values
+        
+        # Creating an instance of Isolation Forest and fitting it with the data
+        clf = IsolationForest(n_estimators=100, max_samples='auto', contamination=float(0.1), random_state=42)
+        clf.fit(train_X)
+            
+        # Predicting the anomalies for the current data point in the test dataset
+        test_X = row[target_cols].values.reshape(1, -1)
+        pred = clf.predict(test_X)
+        
+        # Creating a new row to add to the result DataFrame
+        new_row = row.to_dict()
+        for j, target_col in enumerate(target_cols):
+            # Adding the target column name to the list of anomalies if it's predicted as an anomaly
+            if pred[0][j] == -1:
+                new_row[target_col+'_anomaly'] = 1
+            else:
+                new_row[target_col+'_anomaly'] = 0
+        
+        # Adding the new row to the result DataFrame
+        result_data = result_data.append(new_row, ignore_index=True)
+
+    return result_data
+
+
+# Dividing the test data into equal chunks (except for the last one)
+chunk_size = len(test_data) // cpu_count()
+test_data_chunks = [test_data.iloc[i:i+chunk_size] for i in range(0, len(test_data), chunk_size)]
+
+# Processing the chunks in parallel using multiprocessing
+with Pool(cpu_count()) as pool:
+    result_chunks = pool.map(process_chunk, test_data_chunks)
+
+# Combining the results into one DataFrame
+result_data = pd.concat(result_chunks, ignore_index=True)
+
+# Saving the result DataFrame to a new CSV file
+result_data.to_csv('result.csv', index=False)
