@@ -440,3 +440,37 @@ result_data = pd.concat(result_chunks, ignore_index=True)
 # Saving the result DataFrame to a new CSV file
 result_data.to_csv('result.csv', index=False)
 
+
+
+
+#send EMAIL
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.application import MIMEApplication
+
+# email details
+sender_email = 'your_email@example.com'
+sender_password = 'your_email_password'
+recipient_email = 'recipient_email@example.com'
+email_subject = 'CSV file attachment'
+email_body = 'Please find attached the CSV file.'
+
+# create message object
+message = MIMEMultipart()
+message['From'] = sender_email
+message['To'] = recipient_email
+message['Subject'] = email_subject
+message.attach(MIMEText(email_body))
+
+# attach csv file
+with open('path/to/your/csv/file.csv', 'rb') as file:
+    attachment = MIMEApplication(file.read(), _subtype='csv')
+    attachment.add_header('Content-Disposition', 'attachment', filename='file.csv')
+    message.attach(attachment)
+
+# send email
+with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
+    smtp.starttls()
+    smtp.login(sender_email, sender_password)
+    smtp.send_message(message)
