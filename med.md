@@ -64,3 +64,44 @@ def process_chunk(chunk):
         new_row['anomaly'] = ', '.join(anomalies)
         new_row['median'] = ', '.join
 ................................................................................
+
+def record_results(results, file_path):
+    # Creating an empty DataFrame to store the final results
+    final_results = pd.DataFrame(columns=['ID', 'Sub ID', 'True Positives', 'False Positives', 'Total Anomalies', 'Precision', 'Recall'])
+
+    # Looping through the results from each chunk and recording the true positives and false positives
+    for result in results:
+        true_positives = 0
+        false_positives = 0
+        total_anomalies = 0
+
+        for i, row in result.iterrows():
+            if row['anomaly'] != '':
+                total_anomalies += 1
+
+                if (row['ID'], row['Sub ID'], row['Present']) in anomaly_rows:
+                    true_positives += 1
+                else:
+                    false_positives += 1
+
+        precision = true_positives / (true_positives + false_positives)
+        recall = true_positives / len(anomaly_rows)
+
+        # Adding the results to the final DataFrame
+        final_results = final_results.append({'ID': result['ID'].iloc[0],
+                                              'Sub ID': result['Sub ID'].iloc[0],
+                                              'True Positives': true_positives,
+                                              'False Positives': false_positives,
+                                              'Total Anomalies': total_anomalies,
+                                              'Precision': precision,
+                                              'Recall': recall},
+                                             ignore_index=True)
+
+    # Adding the median value of the anomaly target column based on the train data of that target column to the final results
+    for col in target_cols:
+        train_median = train_data[train_data[col].notna()].groupby(['ID', 'Sub ID', 'Present'])[col].median().reset_index()
+        final_results = pd.merge(final_results, train_median, on=['ID', 'Sub ID', 'Present'], how='left')
+
+    # Writing the results to a CSV file
+    final_results.to_csv(file_path, index=False)
+.....................................................................................................................................
