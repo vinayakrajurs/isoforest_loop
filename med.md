@@ -105,3 +105,41 @@ def record_results(results, file_path):
     # Writing the results to a CSV file
     final_results.to_csv(file_path, index=False)
 .....................................................................................................................................
+from sklearn.ensemble import IsolationForest
+
+def find_optimal_contamination_rate(data, max_rate=0.5, min_rate=0.0001, tolerance=0.0001):
+    """
+    Find the optimal contamination rate for Isolation Forest using a binary search.
+    
+    Parameters:
+    data (array-like): The data to use for training the model.
+    max_rate (float): The maximum contamination rate to search for.
+    min_rate (float): The minimum contamination rate to search for.
+    tolerance (float): The desired level of accuracy in finding the optimal contamination rate.
+    
+    Returns:
+    float: The optimal contamination rate.
+    """
+    best_rate = 0
+    max_score = 0
+    mid_rate = (max_rate + min_rate) / 2
+    
+    while abs(max_rate - min_rate) > tolerance:
+        clf = IsolationForest(n_estimators=100, max_samples='auto', random_state=42, contamination=mid_rate)
+        clf.fit(data)
+        score = clf.score_samples(data)
+        outliers = sum(score < clf.threshold_)
+        
+        if outliers > max_score:
+            max_score = outliers
+            best_rate = mid_rate
+        
+        if outliers / len(data) > mid_rate:
+            min_rate = mid_rate
+        else:
+            max_rate = mid_rate
+        
+        mid_rate = (max_rate + min_rate) / 2
+        
+    return best_rate
+......................................................................................................
