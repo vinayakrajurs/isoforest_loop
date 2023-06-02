@@ -1,3 +1,38 @@
+import smtplib
+from email.mime.text import MIMEText
+from tabulate import tabulate
+import pandas as pd
+
+# email details
+sender_email = 'your_email@example.com'
+sender_password = 'your_email_password'
+recipient_email = 'recipient_email@example.com'
+email_subject = 'CSV table in email body'
+email_body = 'Please find the CSV table below:\n\n'
+
+# read csv file
+csv_file_path = 'path/to/your/csv/file.csv'
+df = pd.read_csv(csv_file_path)
+
+# create table from csv data
+table = tabulate(df, headers='keys', tablefmt='html')
+
+# add table to email body
+email_body += f'<pre>{table}</pre>'
+
+# create message object
+message = MIMEText(email_body, 'html')
+message['From'] = sender_email
+message['To'] = recipient_email
+message['Subject'] = email_subject
+
+# send email
+with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
+    smtp.starttls()
+    smtp.login(sender_email, sender_password)
+    smtp.send_message(message)
+
+#####################################################################
 #Grid Search LOF
 import pandas as pd
 from sklearn.neighbors import LocalOutlierFactor
