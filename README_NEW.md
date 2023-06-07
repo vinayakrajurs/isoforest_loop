@@ -56,3 +56,17 @@ def run_anomaly_detection(config):
             pred1 = clf1.predict(test_X.reshape(1, -1))
             
             # Predicting the anomalies for the current data point in the test dataset using Local
+            
+            
+#######################################################################################
+In this example, the logging module is imported, and the logger is configured using basicConfig(). You can customize the log level (e.g., logging.INFO, logging.DEBUG) and format to suit your needs.
+
+The functions load_data(), preprocess_data(), train_model(), and evaluate_model() represent the different steps of your machine learning pipeline. You can modify them accordingly.
+
+The main() function orchestrates the entire process, calling the necessary functions and handling any exceptions that might occur. The logger is used to log informative messages at various stages of the process.
+
+This code provides a basic structure for incorporating logging into your machine learning model. You can customize it further by adding more logging statements or adjusting the log level as required.
+
+In this updated code, the filename parameter is added to the basicConfig() function, specifying the name of the log file as 'model.log'. Additionally, the filemode parameter is set to 'w' to overwrite the file if it already exists. Adjust these parameters according to your requirements.
+
+When you run this code, the log messages will be saved to the specified log file (model.log in this case). You can access the log file using any text editor or file viewer of your choice to view the logged messages.
