@@ -1,5 +1,46 @@
 import pandas as pd
 from sklearn.ensemble import IsolationForest
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+
+# Load the train and test data
+train_data = pd.read_csv('train_data.csv')
+test_data = pd.read_csv('test_data.csv')
+
+# Combine train and test data for one-hot encoding
+combined_data = pd.concat([train_data, test_data], axis=0)
+
+# Perform one-hot encoding for categorical columns
+categorical_columns = ['target1', 'target2']
+ohe = OneHotEncoder(sparse=False, handle_unknown='ignore')
+encoded_features = ohe.fit_transform(combined_data[categorical_columns])
+encoded_columns = ohe.get_feature_names(categorical_columns)
+combined_data.drop(categorical_columns, axis=1, inplace=True)
+combined_data[encoded_columns] = encoded_features
+
+# Split the combined data back into train and test sets
+train_data = combined_data[:len(train_data)]
+test_data = combined_data[len(train_data):]
+
+# Normalize the numeric columns
+numeric_columns = ['target1', 'target2']  # Adjust the columns as needed
+scaler = StandardScaler()
+train_data[numeric_columns] = scaler.fit_transform(train_data[numeric_columns])
+test_data[numeric_columns] = scaler.transform(test_data[numeric_columns])
+
+# Train the Isolation Forest model
+model = IsolationForest(contamination=0.01)  # Adjust the contamination parameter as needed
+model.fit(train_data.drop('date', axis=1))  # Drop the 'date' column from training data if not needed
+
+# Predict anomalies on the test data
+test_data['anomaly_score'] = model.decision_function(test_data.drop('date', axis=1))  # Drop the 'date' column from test data if not needed
+test_data['anomaly_label'] = model.predict(test_data.drop('date', axis=1))  # Drop the 'date' column from test data if not needed
+
+# Output the test data with anomaly scores and labels
+print(test_data[['date', 'target1', 'target2', 'anomaly_score', 'anomaly_label']])
+
+####################################################################################
+import pandas as pd
+from sklearn.ensemble import IsolationForest
 from sklearn.neighbors import LocalOutlierFactor
 from sklearn.svm import OneClassSVM
 import configparser
